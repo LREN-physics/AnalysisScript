@@ -1,65 +1,76 @@
-function RunQUIQI
+function RunQUIQI(Subregions,Lambda,DataType,AnalType)
 % Main function enabling the insertion of a motion degradation index into
 % the analysis of MRI data. 
 %
+% INPUTS: 
+%       - Subregions: cell array with the list of tissue types to be analysed 
+%                       p1: grey matter
+%                       p2: white matter
+%       - Lambda: cell array with the list of the desired powers of the 
+%                motion degradation index used for the computation of the 
+%                ReML basis functions.
+%                       0 : ordinary least-square analysis
+%                       [0 1 2 3 4] : separate basis functions will be 
+%                           computed from the MDI, one for each value.
+%       - DataType: cell array with the list of maps to be analysed. 
+%                   The options are:
+%                       PDT1_R2s: R2* maps computed from the PDw and T1w raw image contrasts
+%                       R2s_OLS: R2* maps computed from the PDw, T1w and MTw raw image contrasts
+%                       R1: R1 maps computed from the T1w and PDw raw image contrasts
+%                       MT: Mangetization Transfer maps computed from the PDw, T1w and MTw raw image contrasts
+%       - AnalType: string with the name of the analysis to be performed. 
+%                  The analysis runs on all the datasets in Subject_details.mat 
+%                       Full - one-sample t-test of the age-dependence of the data on age
+%                       Residuals - similar to 'Full' but here residual images 
+%                           are saved for subsequent analysis
+%                       Exclusion - conducts analysis after exclusion of the fraction
+%                            of the cohort with the highest value of the MDI
+%                       MotionBias - examines the dependence of the R2* data on the MDI (bias)
+%                       Specificity - similar to 'Full' but the age assigned 
+%                           to each dataset is scrambled randomly across the 
+%                           datasets to allow for the monitoring of false positives
+%
+% OUTPUTS:
+%       none
+%
+% EXAMPLES:
+%
+%       RunQUIQI({'p1'},{0},{'R1'},'Residuals')  
+%       RunQUIQI({'p1'},{0},{'MT'},'Exclusion')  
+%       RunQUIQI({'p1','p2'},{0},{'PDT1_R2s','R2s_OLS','R1','MT'},'Exclusion')  
+%       RunQUIQI({'p1','p2'},{0,[0 1 2 3 4]},{'PDT1_R2s','R2s_OLS','R1','MT'},'Residuals') 
+%       RunQUIQI({'p1','p2'},{0},{'PDT1_R2s','R2s_OLS','R1','MT'},'Exclusion') 
+%       RunQUIQI({'p1','p2'},{0,[0 1 2 3 4]},{'PDT1_R2s','R2s_OLS','R1','MT'},'MotionBias') 
+%
 %__________________________________________________________________________
-% Copyright (C) 2021 Laboratory for Neuroimaging Research
-% Written by A. Lutti, 2021.
+% Copyright (C) 2022 Laboratory for Neuroimaging Research
+% Written by A. Lutti, 2022.
 % Laboratory for Neuroimaging Research, Lausanne University Hospital, Switzerland
 % 
 % REFERENCES
 % 1. 'QUIQI – using a QUality Index for the analysis of Quantitative Imaging
 % data'. Di Domenicantonio et al., Proceedings of the Annual Meeting of the
 % International Society for Magnetic Resonance in Medicine, 2020.
-%  2. 'Inserting an index of image quality into the statistical analysis of MRI data',
-% Lutti et al, in prep.
+%  2. 'Restoring statistical validity in group analyses of motion-corrupted MRI data',
+% Lutti et al, Human Brain Mapping 2022.
 
-
+% Get subject details
 Params=GetParams;
-eval(['load ' fullfile(Params.DataDir,'Subject_Details.mat')]);
+eval(['load ' fullfile(Params.HomeDir,'Subject_Details.mat')]);
 
-lambda={[0 1 2 3],0,1,2,3,4,5};
-Subregions={'p1','p2'};DataType={'PDw_R2s','MTw_R2s','T1w_R2s'};AnalType='Full';
-% lambda={0,1,2,3,4,5};% Commented due to size of output data (regional analysis)
-% Subregions=cat(2,{'p1','p2'},getROIpairs('GM'));DataType={'PDw_R2s'};AnalType='Full';
-[QUIQI,FolderPaths]=PrepAnalysis(Subject_Details,lambda,DataType,Subregions,AnalType);
-RunAnalysis(QUIQI,AnalType);
-% !! The following requires the versions of spm_spm.m and spm_est_non_shericity.m
-% provided in this package!!
-FreeEnergyAnalysis(lambda,Subregions,FolderPaths)
-
-lambda={0,3};
-Subregions={'p1','p2'};DataType={'PDw_R2s'};AnalType='Residuals';
-[QUIQI,FolderPaths]=PrepAnalysis(Subject_Details,lambda,DataType,Subregions,AnalType);
-RunAnalysis(QUIQI,AnalType);
-% !! The following requires the versions of spm_spm.m and spm_est_non_shericity.m
-% provided in this package!!
-MDIvsResAnalysis(QUIQI,FolderPaths);
-
-lambda={0};
-Subregions=cat(2,{'p1','p2'});DataType={'PDw_R2s'};AnalType='Exclusion';
-[QUIQI,~]=PrepAnalysis(Subject_Details,lambda,DataType,Subregions,AnalType);
-RunAnalysis(QUIQI,AnalType);
-
-% lambda={0,3};% Commented because requires data within a narrow age-range (see README.pdf)
-% Subregions={'p1','p2'};DataType={'PDw_R2s'};AnalType='MotionBias';
-% [QUIQI,FolderPaths]=PrepAnalysis(Subject_Details,lambda,DataType,Subregions,AnalType);
-% RunAnalysis(QUIQI,AnalType);
-% MDIvsResAnalysis(QUIQI,FolderPaths);
-% 
-% lambda={0,3};% Commented because requires data within a narrow age-range (see README.pdf)
-% Subregions={'p1','p2'};DataType={'PDw_R2s'};AnalType='GroupComparison';
-% [QUIQI,FolderPaths]=PrepAnalysis(Subject_Details,lambda,DataType,Subregions,AnalType);
-% RunAnalysis(QUIQI,AnalType);
-% FalsePositiveCount(FolderPaths,'^spmT.*.(img|nii)$',[4.83 4.89 4.47 4.53],[3.16 3.16 3.16 3.16]);
-
-lambda={0,3};
-Subregions={'p1','p2'};DataType={'PDw_R2s'};AnalType='Specificity';
-[QUIQI,FolderPaths]=PrepAnalysis(Subject_Details,lambda,DataType,Subregions,AnalType);
-RunAnalysis(QUIQI,AnalType);
-FalsePositiveCount(FolderPaths,'^spmF.*.(img|nii)$',[15.07 15.28 13.09 13.19],[7.33 7.33 7.33 7.33]);
-
+% Loop for all the DataType entries
+for ctr=1:size(DataType,2)
+    
+    % Prepare analysis folders
+    [QUIQI,~]=PrepAnalysis(Subject_Details,Lambda,DataType(ctr),Subregions,AnalType);
+    
+    % Run analysis
+    RunAnalysis(QUIQI,AnalType);
+    
+    % Compare the MDI and the residuals analysis 
+    MDIvsResAnalysis(QUIQI);
+    
 end
 
 
-
+end

@@ -1,15 +1,17 @@
 function [Subject_Details_subset]=Select_cohort_subset(Subject_Details,AnalParams)
 % From a full cohort of data, selects a subset of data with the same number of datasets per age bin
+%
 % INPUTS:
 %     - Subject_Details: structure of demographic information for the analysis cohort 
 %     - AnalParams: structure containg the details of the binning of the
 %     input cohort according to age. Set in GetAnalParams.m
+%
 % OUTPUTS:
 %     -  Subject_Details_subset: subset of data with AnalParams.AgeBinning.Nsamples datasets per age bin
 %
 %__________________________________________________________________________
-% Copyright (C) 2021 Laboratory for Neuroimaging Research
-% Written by A. Lutti, 2021.
+% Copyright (C) 2022 Laboratory for Neuroimaging Research
+% Written by A. Lutti, 2022.
 % Laboratory for Neuroimaging Research, Lausanne University Hospital, Switzerland
 
 [BinSize,BinIndx]=histc([Subject_Details.Age],linspace(AnalParams.AgeBinning.Agemin,AnalParams.AgeBinning.Agemax,AnalParams.AgeBinning.BinNb));
