@@ -1,21 +1,24 @@
 function PrepareMasksAndCohort(CurrentPath,CreateNewMask,Subregions)
 % Creates explicit mask for image analysis.
-% INPUTS:
-%     - CurrentPath: location of the analysis folder
-%     - CreateNewMask: binary flag. If CreateNewMask is set to 1, a new explicit mask will be computed
-%     even if one already exists.
-%     - Subregions: region of interest included in the computed explicit
-%     mask. Initialized in RunQUIQI.m.
-
 % This function creates an explicit mask if it's non-existent at the
 % location specified by CurrentPath or if CreateNewMask is set to 1 (e.g.
 % because a new demographic information file was created at the
 % start of the analysis, suggesting a new analysis).
 % The mask will be defined over a region defined by Subregions. Values for Subregions might be p1/p2
 % for grey/white matter or cortical regions labels of the neuromorphometric atlas.
+%
+% INPUTS:
+%     - CurrentPath: location of the analysis folder
+%     - CreateNewMask: binary flag. If CreateNewMask is set to 1, a new explicit mask will be computed
+%     even if one already exists.
+%     - Subregions: region of interest included in the computed explicit
+%     mask. Initialized in RunQUIQI.m.
+%
+% OUTPUTS:
+%       none
 %__________________________________________________________________________
-% Copyright (C) 2021 Laboratory for Neuroimaging Research
-% Written by A. Lutti, 2021.
+% Copyright (C) 2022 Laboratory for Neuroimaging Research
+% Written by A. Lutti, 2022.
 % Laboratory for Neuroimaging Research, Lausanne University Hospital, Switzerland
 
 MakeNewMask=0;

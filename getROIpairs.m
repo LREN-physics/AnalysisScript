@@ -1,5 +1,6 @@
 function Subregions=getROIpairs(TissueType)
 % Computes pairs of regional atlas labels extracted from the left & right hemispheres.
+%
 % INPUTS:
 %     - TissueType: tissue class of interest for the extraction of the atlas labels. Possible values: 'WM' (white
 % matter, 'GM' (grey matter) or 'GMnoB0' (grey matter after exclusion of the regions affected by B0-inhomogeneities, defined in GetParams)
@@ -7,8 +8,8 @@ function Subregions=getROIpairs(TissueType)
 % OUTPUTS:
 %     - Subregions: cell array of pairs of regional atlas labels (left/right hemisphere). 
 %__________________________________________________________________________
-% Copyright (C) 2021 Laboratory for Neuroimaging Research
-% Written by A. Lutti, 2021.
+% Copyright (C) 2022 Laboratory for Neuroimaging Research
+% Written by A. Lutti, 2022.
 % Laboratory for Neuroimaging Research, Lausanne University Hospital, Switzerland
 
 Params=GetParams;

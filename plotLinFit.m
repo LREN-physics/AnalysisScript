@@ -3,8 +3,8 @@ function plotLinFit(X,Y,yfit,P,Powers,Rsq,xlabl,ylabl)
 % coefficients and r-square
 %
 %__________________________________________________________________________
-% Copyright (C) 2021 Laboratory for Neuroimaging Research
-% Written by A. Lutti, 2021.
+% Copyright (C) 2022 Laboratory for Neuroimaging Research
+% Written by A. Lutti, 2022.
 % Laboratory for Neuroimaging Research, Lausanne University Hospital, Switzerland
 
 base=10;

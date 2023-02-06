@@ -1,18 +1,22 @@
 function FreeEnergyAnalysis(lambda,Subregions,FolderPaths)
 % Analysis of the Free Energy change estimated from ReML for different noise models
+%
 % INPUTS: 
 %     - lambda: cell array of power values of the MDI, initialized in RunQUIQI.m
 %     - Subregions:cell array of regions  of interests for the analysis. Initialized in RunQUIQI.m.
 %     - FolderPaths: structure of analysis folder pathts. Computed by PrepAnalysis.m
-% OUTPUTS: saved to disk in 'ReMLAnal' folder
+%
+% OUTPUTS: 
+%   none
+%
+% OUTPUT FILES CREATED: saved to disk in 'ReMLAnal' folder
 %     - For analysis over a whole tissue class (Subregions = p1 or p2), the output of the analysis is a matlab figure containing a histogram of free energy values.
 %     - For local analysis (when Subregions contains atlas regional labels), the outputs are maps of Free Energy difference at the regional level. 
 %       These differences are calculated between OLS analyses, WLS analyses yielding the maximum local Free Energy and WLS analyses
 %       from a reference noise model defined by Params.ReMLAnal.RefLambda.
-%
 %__________________________________________________________________________
-% Copyright (C) 2021 Laboratory for Neuroimaging Research
-% Written by A. Lutti, 2021.
+% Copyright (C) 2022 Laboratory for Neuroimaging Research
+% Written by A. Lutti, 2022.
 % Laboratory for Neuroimaging Research, Lausanne University Hospital, Switzerland
 
 Params=GetParams;

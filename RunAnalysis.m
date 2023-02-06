@@ -1,15 +1,21 @@
 function RunAnalysis(QUIQI,AnalType)
 % Runs image analysis.
+%
 % INPUTS: 
 %     - QUIQI: structure containing the information required for the analysis. Computed by PrepAnalysis.m
 %     - AnalType: analysis type. Initialized in RunQUIQI.m.
 %
+% OUTPUTS:
+%       none
+%
+% If paralell processing is prefered: uncomment lines 27-32 and comment line 36
 %__________________________________________________________________________
-% Copyright (C) 2021 Laboratory for Neuroimaging Research
-% Written by A. Lutti, 2021.
+% Copyright (C) 2022 Laboratory for Neuroimaging Research
+% Written by A. Lutti, 2022.
 % Laboratory for Neuroimaging Research, Lausanne University Hospital, Switzerland
 
-for subsetctr=1:size(QUIQI,2)% Analysis folder is deleted if already exists
+% Create analysis folder. Delete previous analysis folder if already exists
+for subsetctr=1:size(QUIQI,2)
     if exist(fullfile(char(QUIQI(subsetctr).CohortPath),char(QUIQI(subsetctr).AnalDir),'SPM.mat'),'file')
         s=['delete ' fullfile(char(QUIQI(subsetctr).CohortPath),char(QUIQI(subsetctr).AnalDir),'SPM.mat')];eval(s);
     end
@@ -17,14 +23,21 @@ for subsetctr=1:size(QUIQI,2)% Analysis folder is deleted if already exists
         rmdir(fullfile(char(QUIQI(subsetctr).CohortPath),char(QUIQI(subsetctr).AnalDir)),'s');
     end
 end
+
 if ~isempty(gcp('nocreate'))
     delete(gcp('nocreate'));
 end
+
 parpool(12);
 parfor subsetctr=1:size(QUIQI,2)
-    Subject_Details_subset=load(fullfile(char(QUIQI(subsetctr).CohortPath),'Subject_Details.mat'));
-    Subject_Details_subset=Subject_Details_subset.Subject_Details;
+
+% Loop for the several analysis to be conducted. Such information is
+% contained in QUIQI structure
+%for subsetctr=1:size(QUIQI,2)
     
+    % Get info
+    Subject_Details_subset=load(fullfile(char(QUIQI(subsetctr).CohortPath),'Subject_Details.mat'));
+    Subject_Details_subset=Subject_Details_subset.Subject_Details;   
     CurrentDir=fullfile(char(QUIQI(subsetctr).CohortPath),char(QUIQI(subsetctr).AnalDir));
     if(~exist(CurrentDir,'dir'))
         mkdir(CurrentDir)
@@ -32,14 +45,17 @@ parfor subsetctr=1:size(QUIQI,2)
     copyfile(spm_select('FPList',char(QUIQI(subsetctr).CohortPath),['^ExplicitMask_' QUIQI(subsetctr).ROI '.nii']),CurrentDir);% copy masks to local folder
     myparsave(fullfile(CurrentDir,'ReMLcomps'),QUIQI(subsetctr).ReML,'ReMLcomps');
     
-    Covariates=[Subject_Details_subset.confound];
+    % Compute a design  matrix DM used in subsequent analyses 
     DM=MakeDM(Subject_Details_subset,QUIQI(subsetctr).MotionReg{1},AnalType);
-    RunSPMAnal(Subject_Details_subset,CurrentDir,QUIQI(subsetctr).InputData,QUIQI(subsetctr).ROI,QUIQI(subsetctr).ReML,[],'explicit',AnalType,DM,[Covariates.BrainVol]')
+    
+    % Run analysis on SPM
+    RunSPMAnal(Subject_Details_subset,CurrentDir,QUIQI(subsetctr).InputData,QUIQI(subsetctr).ROI,QUIQI(subsetctr).ReML,[],'explicit',AnalType,DM)
 end
 
 end
 
-function RunSPMAnal(Subject_Details,CurrentDir,InputData,ROI,CoVReml,Weights,masking,AnalType,DM,BrainVol)
+%% Auxiliar function RunSPMAnal
+function RunSPMAnal(Subject_Details,CurrentDir,InputData,ROI,CoVReml,Weights,masking,AnalType,DM)
 
 Params=GetParams;
 AnalParams=GetAnalParams(AnalType);
@@ -62,22 +78,20 @@ Scans=Scans';
 spm_jobman('initcfg');
 clear matlabbatch
 matlabbatch{1}.spm.stats.factorial_design.dir = {CurrentDir};
-%%
+
 if strcmp(AnalType,'GroupComparison')
     matlabbatch{1}.spm.stats.factorial_design.des.t2.scans1 = Scans(1:AnalParams.NGroup1);
     matlabbatch{1}.spm.stats.factorial_design.des.t2.scans2 = Scans(AnalParams.NGroup1+1:end);
     matlabbatch{1}.spm.stats.factorial_design.des.t2.dept = 0;
     matlabbatch{1}.spm.stats.factorial_design.des.t2.variance = 1;
     matlabbatch{1}.spm.stats.factorial_design.des.t2.gmsca = 0;
-    matlabbatch{1}.spm.stats.factorial_design.des.t2.ancova = 0;    
+    matlabbatch{1}.spm.stats.factorial_design.des.t2.ancova = 0;
 else
     matlabbatch{1}.spm.stats.factorial_design.des.t1.scans = Scans;
 end
-%%
-%%
+
 for ctr=1:size(DM.mat,2)
     matlabbatch{1}.spm.stats.factorial_design.cov(ctr).c = DM.mat(:,ctr);
-    %%
     matlabbatch{1}.spm.stats.factorial_design.cov(ctr).cname = DM.text{ctr};
     matlabbatch{1}.spm.stats.factorial_design.cov(ctr).iCFI = 1;
     matlabbatch{1}.spm.stats.factorial_design.cov(ctr).iCC = 1;
@@ -95,13 +109,14 @@ elseif strcmp('bothplicit',masking)
     matlabbatch{1}.spm.stats.factorial_design.masking.im = 1;
     matlabbatch{1}.spm.stats.factorial_design.masking.em = {ExplicitMask};
 end
-%%
-matlabbatch{1}.spm.stats.factorial_design.globalc.g_user.global_uval = BrainVol';
-%%
+
+matlabbatch{1}.spm.stats.factorial_design.globalc.g_user.global_uval = [DM.confounds.BrainVol];
+% matlabbatch{1}.spm.stats.factorial_design.globalc.g_user.global_uval = ones(size(Scans));
+
 matlabbatch{1}.spm.stats.factorial_design.globalm.gmsca.gmsca_no = 1;
-matlabbatch{1}.spm.stats.factorial_design.globalm.glonorm = 3;
+matlabbatch{1}.spm.stats.factorial_design.globalm.glonorm = 1;
 spm_jobman('run', matlabbatch);
-   
+
 if ~isempty(CoVReml)
     load(fullfile(CurrentDir,'SPM.mat'))
     if isfield(SPM.xVi,'Vi')% Group comparison
@@ -152,15 +167,15 @@ if strcmp(AnalType,'GroupComparison')
     matlabbatch{1}.spm.stats.con.consess{2}.tcon.sessrep = 'none';
     matlabbatch{1}.spm.stats.con.delete = 1;
     spm_jobman('run', matlabbatch);
-% elseif strcmp(AnalType,'Exclusion')
-%     spm_jobman('initcfg');
-%     clear matlabbatch
-%     matlabbatch{1}.spm.stats.con.spmmat = {fullfile(CurrentDir,'SPM.mat')};
-%     matlabbatch{1}.spm.stats.con.consess{1}.tcon.name = 'Mean';
-%     matlabbatch{1}.spm.stats.con.consess{1}.tcon.weights = [1 0];
-%     matlabbatch{1}.spm.stats.con.consess{1}.tcon.sessrep = 'none';
-%     matlabbatch{1}.spm.stats.con.delete = 1;
-%     spm_jobman('run', matlabbatch);
+    % elseif strcmp(AnalType,'Exclusion')
+    %     spm_jobman('initcfg');
+    %     clear matlabbatch
+    %     matlabbatch{1}.spm.stats.con.spmmat = {fullfile(CurrentDir,'SPM.mat')};
+    %     matlabbatch{1}.spm.stats.con.consess{1}.tcon.name = 'Mean';
+    %     matlabbatch{1}.spm.stats.con.consess{1}.tcon.weights = [1 0];
+    %     matlabbatch{1}.spm.stats.con.consess{1}.tcon.sessrep = 'none';
+    %     matlabbatch{1}.spm.stats.con.delete = 1;
+    %     spm_jobman('run', matlabbatch);
 else
     spm_jobman('initcfg');
     clear matlabbatch
@@ -181,7 +196,7 @@ end
 
 end
 
-
+%% Auxiliar function myparsave
 function myparsave(SaveDir, ToBeSaved,SaveName)
 eval([SaveName '= ToBeSaved;'])
 save(SaveDir,SaveName, '-v7.3')

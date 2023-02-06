@@ -1,5 +1,6 @@
 function DM=MakeDM(Subject_Details,MDI,AnalType)
-% Computes a design  matrix DM used in subsequent analyses (RunAnalysis.m). 
+% Computes a design  matrix DM used in subsequent analyses (RunAnalysis.m).
+%
 % INPUTS:
 %     - Subject_Details: structure of demographic information for the analysis cohort e.g. age,
 % gender, brain volume,... 
@@ -12,35 +13,40 @@ function DM=MakeDM(Subject_Details,MDI,AnalType)
 %     - DM.size: size. Used for the definition of the F-contrast in the
 %     ageing analyses 
 %     - DM.text: text description
+%     - DM.ReMLFcontrast: F-contrast used by ReML for identification of significant voxels
 %__________________________________________________________________________
-% Copyright (C) 2021 Laboratory for Neuroimaging Research
-% Written by A. Lutti, 2021.
+% Copyright (C) 2022 Laboratory for Neuroimaging Research
+% Written by A. Lutti, 2022.
 % Laboratory for Neuroimaging Research, Lausanne University Hospital, Switzerland
 
 
 Params=GetParams;
-Covariates=[Subject_Details.confound];
+DM.confounds=[Subject_Details.confound];
 if strcmp(AnalType,'MotionBias')
-    MDI = MDI-mean(MDI,1);%mean centering and power components is done here to allow for analysis on a subset of the cohort  
-    DM.mat=MDI.^Params.MotionRegPowers(1);
+    X=MDI.^Params.MotionRegPowers(1);
     for ctr=2:size(Params.MotionRegPowers,2)
-        DM.mat=cat(2,DM.mat,MDI.^Params.MotionRegPowers(ctr));    
+        X=cat(2,X,MDI.^Params.MotionRegPowers(ctr));    
     end
-    DM.size=size(DM.mat,2);
-    for ctr=1:size(DM.mat,2)
+    DM.size=size(X,2);
+    for ctr=1:size(X,2)
         DM.text{ctr}=num2str(ctr);
     end
-elseif strcmp(AnalType,'GroupComparison')
-    DM.mat=[];DM.size=0;
-    DM.mat=cat(2,DM.mat,[Subject_Details(:).Age]'-mean([Subject_Details(:).Age],2),...
-        ([Subject_Details(:).Age]'-mean([Subject_Details(:).Age],2)).^2);
-    DM.text={'Age','Agesq'};
 else
-    DM.mat=cat(2,[Subject_Details(:).Age]',([Subject_Details(:).Age]-mean([Subject_Details.Age])).^2');
-    DM.text={'Age','Agesq'};
+    if Params.AgeModelOrder==3
+        X=cat(2,[Subject_Details(:).Age]',[Subject_Details(:).Age].^2',[Subject_Details(:).Age].^3');
+        DM.text={'Age','Agesq','AgeCub'};
+    elseif Params.AgeModelOrder==2
+        X=cat(2,[Subject_Details(:).Age]',[Subject_Details(:).Age].^2');%         DM.mat=cat(2,[Subject_Details(:).Age]',([Subject_Details(:).Age]-mean([Subject_Details.Age])).^2');
+        DM.text={'Age','Agesq'};
+    end
     DM.size=size(DM.text,2);
 end
-DM.mat=cat(2,DM.mat,[Covariates.Gender]');DM.text(size(DM.mat,2))={'Gender'};
+% Adds confounds to the design matrix
+X=cat(2,X,[DM.confounds.Gender]',[DM.confounds.BrainVol]');
+DM.text(DM.size+1)={'Gender'};DM.text(DM.size+2)={'BrainVol'};
+
+% Orthogonalize design matrix
+DM.mat=spm_orth(X-repmat(mean(X,1),[size(X,1) 1]));
 
 DM.desc=AnalType;
 end
